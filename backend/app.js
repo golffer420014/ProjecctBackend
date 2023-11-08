@@ -17,7 +17,7 @@ app.use(morgan('tiny'));
 // app.use(authJwt());
 // __dirname คือตัวแปรพิเศษใน Node.js ที่ระบุโฟลเดอร์ปัจจุบันของไฟล์ JavaScript ที่รันอยู่.
 app.use('/public/uploads', express.static(__dirname + '/public/uploads'))
-console.log('current folder = ', __dirname + '/public/uploads')
+// console.log('current folder = ', __dirname + '/public/uploads')
 app.use(errorHandler); 
 
 
@@ -45,7 +45,7 @@ app.use(`${api}/order`, orderRouter)
 // http://localhost:3000/api/v1/community 
 app.use(`${api}/community`, communityRouter) 
 // http://localhost:3000/api/v1/event 
-app.use(`${api}/event`, eventRouter) 
+app.use(`${api}/event`, eventRouter)  
 // http://localhost:3000/api/v1/review 
 app.use(`${api}/review`, reviewRouter) 
 

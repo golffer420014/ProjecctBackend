@@ -3,12 +3,42 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer')
+const fsUpdate = require('fs').promises;
+const fsDelete = require('fs');
+const path = require('path');
+
+const FILE_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg',
+};
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const isValid = FILE_TYPE_MAP[file.mimetype];
+        let uploadError = new Error('invalid image type');
+
+        if (isValid) {
+            uploadError = null;
+        }
+        // cb = callback
+        cb(uploadError, 'public/uploads')
+    },
+    filename: function (req, file, cb) {
+        //ทุกพื้นที่ว่างจะถูกเติมด้วย - เช่น 'golf suriya' จะเป็น 'golf-suriya'
+        const fileName = file.originalname.split(' ').join('-');
+        const extension = FILE_TYPE_MAP[file.mimetype];
+        cb(null, `${fileName}-${Date.now()}.${extension}`);
+    }
+})
+
+const uploadOptions = multer({ storage: storage })
 
 // http://localhost:3000/api/v1/user
 router.get(`/`, async (req, res) => {
     try {
         const userList = await User.find()//ค้นหาข้อมูล
-            // .select('-passwordHash')
+        // .select('-passwordHash')
 
         if (userList) {
             console.log('user success')
@@ -32,58 +62,107 @@ router.get('/:id', async (req, res) => {
     }
 
 })
-// create
-router.post('/', async (req, res) => {
+// // create
+// router.post('/', uploadOptions.single('image'), async (req, res) => {
+//     try {
+//         const fileName = file.filename
+//         const localhost = `${req.protocol}://${req.get('host')}/public/uploads/`;
+//         let user = new User({
+//             name: req.body.name,
+//             email: req.body.email,
+//             passwordHash: bcrypt.hashSync(req.body.password, 10),
+//             phone: req.body.phone,
+//             isAdmin: req.body.isAdmin,
+//             street: req.body.street,
+//             apartment: req.body.apartment,
+//             zip: req.body.zip,
+//             city: req.body.city,
+//             country: req.body.country,
+//         })
+//         user = await user.save();
+
+//         res.send(user)
+//     } catch (err) {
+//         return res.status(404).send('user cannot  be create')
+//     }
+
+// })
+//register
+router.post('/register', uploadOptions.single('image'), async (req, res) => {
     try {
+        const file = req.file;
+        if (!file) return res.status(400).send('No image uploaded');
+
+        const fileName = file.filename;
+        const localhost = `${req.protocol}://${req.get('host')}/public/uploads/`;
         let user = new User({
-            name: req.body.name,
+            fname: req.body.fname,
+            lname: req.body.lname,
             email: req.body.email,
             passwordHash: bcrypt.hashSync(req.body.password, 10),
-            // passwordHash: (req.body.passwordHash),
-            phone: req.body.phone,
+            address: req.body.address,
             isAdmin: req.body.isAdmin,
-            street: req.body.street,
-            apartment: req.body.apartment,
-            zip: req.body.zip,
-            city: req.body.city,
-            country: req.body.country,
-        })
+            birth: req.body.birth,
+            gender: req.body.gender,
+            image: `${localhost}${fileName}`,
+        });
         user = await user.save();
 
-        res.send(user)
+        res.send(user);
     } catch (err) {
-        return res.status(404).send('user cannot  be create')
+        console.error(err); // เพิ่มการบันทึกข้อผิดพลาดไว้ด้วย
+        return res.status(400).send('the user cannot be created!');
     }
-
-})
+});
 //put
-router.put(`/:id`, async (req, res) => {
+router.put('/:id', uploadOptions.single('image'), async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json("User not found");
         }
 
-        const userUpdate = await User.findOneAndUpdate(
-            { _id: req.params.id },
+        let imagepath = user.image; // เก็บ path เก่าไว้สำหรับการเปรียบเทียบ
+        const file = req.file;
+
+        if (file) {
+            //ลบรูปเก่าถ้ามีรูปใหม่
+            if (user.image) {
+                const oldImagePath = user.image.replace(`${req.protocol}://${req.get('host')}/`, '');
+                await fsUpdate.unlink(oldImagePath); // ใช้ fs.promises เพื่อให้สามารถ await ได้
+            }
+
+            // เซ็ต path ใหม่สำหรับรูปใหม่
+            const fileName = file.filename;
+            const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+            imagepath = `${basePath}${fileName}`;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+           {_id: req.params.id},
             {
+                image: imagepath || user.image,
                 fname: req.body.fname || user.fname,
                 lname: req.body.lname || user.lname,
-                email: req.body.email || user.email,
                 address: req.body.address || user.address,
                 birth: req.body.birth || user.birth,
                 gender: req.body.gender || user.gender,
-                image: req.body.image || user.image,
             },
             { new: true }
         );
 
-        return res.status(200).json(userUpdate);
-         
+        if (!updatedUser)
+            return res.status(500).send('the product cannot be updated!');
+
+        res.send(updatedUser);
     } catch (error) {
-        return res.status(500).json(error);
+        console.error(error);
+        return res.status(500).send('An error occurred');
     }
 });
+
+
+
 //put password
 router.put(`/password/:id`, async (req, res) => {
     try {
@@ -91,6 +170,7 @@ router.put(`/password/:id`, async (req, res) => {
         if (!user) {
             return res.status(404).json("User not found");
         }
+
 
         // เข้ารหัสรหัสผ่านใหม่
         const newPasswordHash = bcrypt.hashSync(req.body.password, 10);
@@ -123,7 +203,7 @@ router.get(`/forgetPassword/:email`, async (req, res) => {
 
         res.send(user)
 
-        
+
     } catch (error) {
         return res.status(500).json(error);
     }
@@ -131,17 +211,39 @@ router.get(`/forgetPassword/:email`, async (req, res) => {
 
 
 //delete
-router.delete('/:id', (req, res) => {
-    User.findByIdAndRemove(req.params.id).then(user => {
+router.delete('/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
         if (user) {
-            return res.status(200).json({ success: true, message: 'the user is deleted!' })
+            // Assuming the image property contains a URL like 'http://10.0.2.2:3000/public/uploads/image.png'
+            // You need to extract the file path after the domain.
+            const urlParts = new URL(user.image);
+            const filePath = path.join('public', 'uploads', path.basename(urlParts.pathname));
+            console.log(filePath)
+            // First, delete the image file
+            fsDelete.unlink(filePath, async (err) => {
+                if (err) {
+                    // If the file does not exist, log the error but still try to remove the user from the database
+                    console.error(err);
+                }
+                // Whether the image was deleted or not, try to remove the user
+                try {
+                    await User.findByIdAndRemove(req.params.id);
+                    return res.status(200).json({ success: true, message: 'ลบผู้ใช้และไฟล์รูปภาพเรียบร้อย' });
+                } catch (err) {
+                    console.error(err);
+                    return res.status(500).json({ success: false, message: 'ไม่สามารถลบผู้ใช้ได้' });
+                }
+            });
         } else {
-            return res.status(404).json({ success: false, message: "user not found!" })
+            return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }
-    }).catch(err => {
-        return res.status(500).json({ success: false, error: err })
-    })
-})
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err });
+    }
+});
+
+
 
 // count
 router.get(`/get/count`, async (req, res) => {
@@ -185,28 +287,8 @@ router.post('/login', async (req, res) => {
     }
 })
 
-//register
-router.post('/register', async (req, res) => {
-    try {
-        let user = new User({
-            fname: req.body.fname,
-            lname: req.body.lname,
-            email: req.body.email,
-            passwordHash: bcrypt.hashSync(req.body.password, 10),
-            address: req.body.address,
-            isAdmin: req.body.isAdmin,
-            birth: req.body.birth,
-            gender: req.body.gender,
-            image: req.body.image,
-        })
-        user = await user.save();
 
 
-        res.send(user);
-    } catch (err) {
-        return res.status(400).send('the user cannot be created!')
-    }
-})
 
 
 module.exports = router;

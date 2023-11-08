@@ -4,6 +4,9 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const multer = require('multer')
+const fsUpdate = require('fs').promises;
+const fsDelete = require('fs');
+const path = require('path');
 
 const FILE_TYPE_MAP = {
     'image/png': 'png',
@@ -91,8 +94,8 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
         rating: req.body.rating,
         provine: req.body.provine,
         category: req.body.category,
-        province: req.body.province, // แก้ไขตามที่ถูกต้อง
-        image: `${localhost}${fileName}`|| req.body.image, // เส้นทางรูปภาพจากข้างต้น
+        province: req.body.province, 
+        image: `${localhost}${fileName}`|| req.body.image,  
     });
 
     try {
@@ -114,71 +117,96 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
 // edit
 
 router.put('/:id', uploadOptions.single('image'), async (req, res) => {
-    if (!mongoose.isValidObjectId(req.params.id)) {
-        return res.status(400).send('Invalid Product Id');
+    try {
+        if (!mongoose.isValidObjectId(req.params.id)) {
+            return res.status(400).send('Invalid Product Id');
+        }
+        const category = await Category.findById(req.body.category);
+        if (!category) return res.status(400).send('Invalid Category');
+
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(400).send('Invalid Product!');
+
+        let imagepath = product.image; // เก็บ path เก่าไว้สำหรับการเปรียบเทียบ
+        const file = req.file;
+
+        console.log(req.body)
+
+        if (file) {
+            // ลบรูปเก่าถ้ามีรูปใหม่
+            if (product.image) {
+                const oldImagePath = product.image.replace(`${req.protocol}://${req.get('host')}/`, '');
+                await fsUpdate.unlink(oldImagePath); // ใช้ fs.promises เพื่อให้สามารถ await ได้
+            }
+
+            // เซ็ต path ใหม่สำหรับรูปใหม่
+            const fileName = file.filename;
+            const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+            imagepath = `${basePath}${fileName}`;
+        }
+
+        const updatedProduct = await Product.findByIdAndUpdate(
+            req.params.id,
+            {
+                image: imagepath,
+                name: req.body.name || product.name,
+                description: req.body.description || product.description,
+                category: req.body.category || product.category,
+                location: req.body.location || product.location,
+                rating: req.body.rating || product.rating,
+                provine: req.body.provine || product.provine,
+                latitude: req.body.latitude || product.latitude,
+                longitude: req.body.longitude || product.longitude,
+            },
+            { new: true }
+        );
+
+        if (!updatedProduct)
+            return res.status(500).send('the product cannot be updated!');
+
+        res.send(updatedProduct);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send('An error occurred');
     }
-    const category = await Category.findById(req.body.category);
-    if (!category) return res.status(400).send('Invalid Category');
-
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(400).send('Invalid Product!');
-
-    const file = req.file;
-    let imagepath;
-
-    if (file) {
-        const fileName = file.filename;
-        const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
-        imagepath = `${basePath}${fileName}`;
-    } else {
-        imagepath = product.image;
-    }
-
-    // const fileName = file.filename;
-    // const baseAndroid = `http://10.0.2.2:3000/public/uploads/`;
-
-    const updatedProduct = await Product.findByIdAndUpdate(
-        req.params.id,
-        {
-            
-            image: imagepath || product.image,
-            name: req.body.name || product.name,
-            description: req.body.description || product.description,
-            category: req.body.category || product.category,
-            location: req.body.location || product.location,
-            rating: req.body.rating || product.rating,
-            image: req.body.image || product.image,
-            provine: req.body.provine || product.provine,
-            latitude: req.body.latitude || product.latitude,
-            longitude: req.body.longitude || product.longitude,
-        },
-        { new: true }
-    );
-
-    if (!updatedProduct)
-        return res.status(500).send('the product cannot be updated!');
-
-    res.send(updatedProduct);
 });
 
 
 // delete
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
-        Product.findByIdAndRemove(req.params.id)
-            .then(product => {
-                if (product) {
-                    return res.status(200).json({ success: true, message: 'product is delete' })
-                } else {
-                    return res.status(404).json({ success: false, message: 'product not found' })
+        const product = await Product.findById(req.params.id);
+        if (product) {
+            // สมมติว่า 'image' เป็น path ไปยังไฟล์รูปภาพที่เกี่ยวข้องกับสินค้า
+            const filePath = product.image.replace(`${req.protocol}://${req.get('host')}/`, '');
+            console.log('img =',filePath)
+            // ลบไฟล์ออกจากระบบไฟล์
+            fsDelete.unlink(filePath, (err) => {
+                if (err) {
+                    // จัดการกับข้อผิดพลาดหากไฟล์ไม่มีอยู่หรือไม่สามารถลบได้
+                    console.error(err);
+                    return res.status(500).json({ success: false, message: 'ไม่สามารถลบไฟล์รูปภาพได้' });
+                
                 }
-            })
-    } catch (err) {
-        console.log(err)
-        return res.status(404).json({ success: false, error: err })
-    }
 
-})
+                // ไฟล์ถูกลบแล้ว, ตอนนี้ลบข้อมูลสินค้าออกจากฐานข้อมูล
+                Product.findByIdAndRemove(req.params.id)
+                    .then(() => {
+                        return res.status(200).json({ success: true, message: 'ลบสินค้าและไฟล์รูปภาพเรียบร้อย' });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        return res.status(500).json({ success: false, message: 'ไม่สามารถลบสินค้าได้' });
+                    });
+            });
+        } else {
+            return res.status(404).json({ success: false, message: 'ไม่พบสินค้า' });
+        }
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, error: err });
+    }
+});
 
 // count
 router.get(`/get/count`, async (req, res) => {
