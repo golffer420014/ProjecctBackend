@@ -37,7 +37,7 @@ router.get(`/`, async (req, res) => {
 //read
 router.get(`/:id`, async (req, res) => {
     try {
-        const Read = await Community.findById(req.params.id);//ค้นหาข้อมูล
+        const Read = await Community.findById(req.params.id).populate('userId', 'image fname lname');
 
         res.status(200).json(Read)
     } catch (err) {
