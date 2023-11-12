@@ -2,7 +2,36 @@ const { Community } = require('../models/community')
 const { User } = require('../models/user')
 const express = require('express');
 const router = express.Router();
+const multer = require('multer')
+const fsUpdate = require('fs').promises;
+const fsDelete = require('fs');
+const path = require('path');
 
+const FILE_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg',
+};
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const isValid = FILE_TYPE_MAP[file.mimetype];
+        let uploadError = new Error('invalid image type');
+
+        if (isValid) {
+            uploadError = null;
+        }
+        // cb = callback
+        cb(uploadError, 'public/uploads')
+    },
+    filename: function (req, file, cb) {
+        //ทุกพื้นที่ว่างจะถูกเติมด้วย - เช่น 'golf suriya' จะเป็น 'golf-suriya'
+        const fileName = file.originalname.split(' ').join('-');
+        const extension = FILE_TYPE_MAP[file.mimetype];
+        cb(null, `${fileName}-${Date.now()}.${extension}`);
+    }
+})
+
+const uploadOptions = multer({ storage: storage })
 
 // http://localhost:3000/api/v1/community
 
@@ -62,20 +91,20 @@ router.post(`/`, async (req, res) => {
     }
 })
 //like
-router.post(`/likePost/:id`, async (req, res) => {
+router.put(`/likePost/:id`, async (req, res) => {
     try {
         const post = await Community.findById(req.params.id);
         if (!post) {
             throw new Error("No such post");
         }
 
-        const isLikedByCurrentUser = post.likes.includes(req.user.id);
+        const isLikedByCurrentUser = post.likes.includes(req.body.likes);
         if (isLikedByCurrentUser) {
             throw new Error("Can't like a post two times");
         } else {
             await Community.findByIdAndUpdate(
                 req.params.id,
-                { $push: { likes: req.user.id } },
+                { $push: { likes: req.body.likes } },
                 { new: true }
             );
             return res.status(200).json({ msg: "Post has been successfully liked" });
@@ -85,6 +114,30 @@ router.post(`/likePost/:id`, async (req, res) => {
     }
 
 })
+//diskLike
+router.put(`/DislikePost/:id`, async (req, res) => {
+    try {
+        const post = await Community.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({ msg: "No such post" });
+        }
+
+        const isLikedByCurrentUser = post.likes.includes(req.body.likes);
+        if (isLikedByCurrentUser) {
+            await Community.findByIdAndUpdate(
+                req.params.id, // ใช้ req.params.id แทน req.params.postId
+                { $pull: { likes: req.body.likes } },
+                { new: true }
+            );
+            return res.status(200).json({ msg: "Post has been successfully disliked" }); // ปรับปรุงข้อความตอบกลับ
+        } else {
+            return res.status(400).json({ msg: "Can't dislike a post you haven't liked" }); // ใช้ 400 Bad Request สำหรับสถานการณ์นี้
+        }
+    } catch (error) {
+        return res.status(500).json({ msg: error.message }); // ใช้ msg สำหรับ consistency
+    }
+});
+
 //put
  router.put(`/:id`, async (req, res) => {
 try {
