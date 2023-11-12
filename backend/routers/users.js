@@ -227,14 +227,15 @@ router.delete('/:id', async (req, res) => {
                     console.error(err);
                 }
                 // Whether the image was deleted or not, try to remove the user
-                try {
-                    await User.findByIdAndRemove(req.params.id);
-                    return res.status(200).json({ success: true, message: 'ลบผู้ใช้และไฟล์รูปภาพเรียบร้อย' });
-                } catch (err) {
-                    console.error(err);
-                    return res.status(500).json({ success: false, message: 'ไม่สามารถลบผู้ใช้ได้' });
-                }
+                
             });
+            try {
+                await User.findByIdAndRemove(req.params.id);
+                return res.status(200).json({ success: true, message: 'ลบผู้ใช้และไฟล์รูปภาพเรียบร้อย' });
+            } catch (err) {
+                console.error(err);
+                return res.status(500).json({ success: false, message: 'ไม่สามารถลบผู้ใช้ได้' });
+            }
         } else {
             return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้' });
         }

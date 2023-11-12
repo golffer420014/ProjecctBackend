@@ -75,18 +75,26 @@ router.get(`/:id`, async (req, res) => {
 
 })
 //post
-router.post(`/`, async (req, res) => {
+router.post(`/`, uploadOptions.single('image'), async (req, res) => {
     try {
 
-        const isEmpty = Object.values(req.body).some((v) => !v);
-        if (isEmpty) {
-            throw new Error("Fill all fields!");
-        }
+        
+        const file = req.file;
+        if(!file) return res.status(400).send('No image request')
 
-        const Post = await Community.create({ ...req.body || null, userId: req.body.userId })
+        const fileName = file.filename
+        const localhost = `${req.protocol}://${req.get('host')}/public/uploads/`;
+
+        const Post = await Community.create({
+            userId: req.body.userId,
+            desc: req.body.desc || '',
+            province: req.body.province || '',
+            image: `${localhost}${fileName}` || ''
+        })
 
         res.send(Post)
     } catch (error) {
+        console.log(error)
         return res.status(500).json(error.message);
     }
 })
@@ -139,42 +147,75 @@ router.put(`/DislikePost/:id`, async (req, res) => {
 });
 
 //put
- router.put(`/:id`, async (req, res) => {
-try {
-    const post = await Community.findById(req.params.id);
-    if (post) {
-        const updatedPost = await Community.findByIdAndUpdate(
-            req.params.id,
-            {
-                image: req.body.image || post.image,
-                desc: req.body.desc || post.desc, 
-                province: req.body.province || post.province
-            },
-            { new: true }
-        );
+router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
+    try {
+        const post = await Community.findById(req.params.id);
+        let imagepath = post.image; // เก็บ path เก่าไว้สำหรับการเปรียบเทียบ
+        const file = req.file;
+        if (file) {
+            // ลบรูปเก่าถ้ามีรูปใหม่
+            if (post.image) {
+                const oldImagePath = post.image.replace(`${req.protocol}://${req.get('host')}/`, '');
+                await fsUpdate.unlink(oldImagePath); // ใช้ fs.promises เพื่อให้สามารถ await ได้
 
-        return res.status(200).json(updatedPost);
-    } else {
-        throw new Error("You can only update your own posts");
+                // เซ็ต path ใหม่สำหรับรูปใหม่
+                const fileName = file.filename;
+                const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+                imagepath = `${basePath}${fileName}`;
+            }
+
+            
+        }
+            const updatedPost = await Community.findByIdAndUpdate(
+                req.params.id,
+                {
+                    image: imagepath || post.image,
+                    desc: req.body.desc || post.desc,
+                    province: req.body.province || post.province
+                },
+                { new: true }
+            );
+
+            return res.status(200).json(updatedPost);
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json(error.message);
     }
-} catch (error) {
-    return res.status(500).json(error.message);
-}
 
 })
 
 router.delete(`/:id`, async (req, res) => {
     try {
-        console.log(req.params.id)
         const post = await Community.findById(req.params.id);
         if (post) {
-            await post.delete()
-            return res.status(200).json({ msg: "Successfully deleted post" });
+            // สมมติว่า 'image' เป็น path ไปยังไฟล์รูปภาพที่เกี่ยวข้องกับสินค้า
+            const filePath = post.image.replace(`${req.protocol}://${req.get('host')}/`, '');
+            console.log('imgggg =', filePath)
+            // ลบไฟล์ออกจากระบบไฟล์
+            fsDelete.unlink(filePath, (err) => {
+                if (err) {
+                    // จัดการกับข้อผิดพลาดหากไฟล์ไม่มีอยู่หรือไม่สามารถลบได้
+                    console.error(err);
+                    return res.status(500).json({ success: false, message: 'ไม่สามารถลบไฟล์รูปภาพได้' });
+
+                }
+
+                // ไฟล์ถูกลบแล้ว, ตอนนี้ลบข้อมูลสินค้าออกจากฐานข้อมูล
+                Community.findByIdAndRemove(req.params.id)
+                    .then(() => {
+                        return res.status(200).json({ success: true, message: 'ลบสินค้าและไฟล์รูปภาพเรียบร้อย' });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        return res.status(500).json({ success: false, message: 'ไม่สามารถลบสินค้าได้' });
+                    });
+            });
         } else {
-            throw new Error("You can only delete your own posts");
+            return res.status(404).json({ success: false, message: 'ไม่พบสินค้า' });
         }
-    } catch (error) {
-        return res.status(500).json(error.message);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false, error: err });
     }
 })
 
