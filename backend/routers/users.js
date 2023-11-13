@@ -130,12 +130,14 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
             if (user.image) {
                 const oldImagePath = user.image.replace(`${req.protocol}://${req.get('host')}/`, '');
                 await fsUpdate.unlink(oldImagePath); // ใช้ fs.promises เพื่อให้สามารถ await ได้
+           
+                // เซ็ต path ใหม่สำหรับรูปใหม่
+                const fileName = file.filename;
+                const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+                imagepath = `${basePath}${fileName}`;
             }
 
-            // เซ็ต path ใหม่สำหรับรูปใหม่
-            const fileName = file.filename;
-            const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
-            imagepath = `${basePath}${fileName}`;
+            
         }
 
         const updatedUser = await User.findByIdAndUpdate(
@@ -151,8 +153,6 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
             { new: true }
         );
 
-        if (!updatedUser)
-            return res.status(500).send('the product cannot be updated!');
 
         res.send(updatedUser);
     } catch (error) {

@@ -147,9 +147,13 @@ router.put(`/DislikePost/:id`, async (req, res) => {
 });
 
 //put
-router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
+router.put('/:id', uploadOptions.single('image'), async (req, res) => {
     try {
         const post = await Community.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json("Post not found");
+        }
+
         let imagepath = post.image; // เก็บ path เก่าไว้สำหรับการเปรียบเทียบ
         const file = req.file;
         if (file) {
@@ -162,6 +166,8 @@ router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
                 const fileName = file.filename;
                 const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
                 imagepath = `${basePath}${fileName}`;
+            }else{
+                imagepath = post.image;
             }
 
             
@@ -169,7 +175,7 @@ router.put(`/:id`, uploadOptions.single('image'), async (req, res) => {
             const updatedPost = await Community.findByIdAndUpdate(
                 req.params.id,
                 {
-                    image: imagepath || post.image,
+                    image: imagepath ,
                     desc: req.body.desc || post.desc,
                     province: req.body.province || post.province
                 },
