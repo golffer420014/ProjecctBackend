@@ -11,8 +11,8 @@ router.get(`/`, async (req, res) => {
         const reviews = await Review.find().populate('productId', 'id name').populate('userId', 'id fname lname image');
 
         if (reviews) {
-            // Reorder fields of each review
-            const reorderedReviews = reviews.map(review => {
+            // Rereview fields of each review
+            const rereviewedReviews = reviews.map(review => {
                 return {
                     productId: review.productId,
                     userId: review.userId,
@@ -27,13 +27,23 @@ router.get(`/`, async (req, res) => {
             });
 
             console.log('Reviews fetched successfully');
-            res.json(reorderedReviews);
+            res.json(rereviewedReviews);
         }
     } catch (err) {
         console.error('Failed to fetch reviews:', err);
         res.status(500).json({ success: false, message: 'Failed to fetch reviews' });
     }
 });
+router.get(`/:id`, async (req, res) => {
+    try {
+        const Read = await Review.findById(req.params.id).populate('userId', 'image fname lname');
+
+        res.status(200).json(Read)
+    } catch (err) {
+        res.status(500).json({ success: false })
+    }
+
+})
 
 router.post(`/`, async (req, res) => {
     try {
@@ -55,10 +65,26 @@ router.post(`/`, async (req, res) => {
             productId: req.body.productId,
         })
 
-        res.send(Post)
+        res.send(Post) 
     } catch (error) {
         return res.status(500).json(error.message);
     }
 })
+
+// delete
+router.delete('/:id', async (req, res) => {
+    try {
+        const review = await Review.findByIdAndRemove(req.params.id);
+
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        res.json({ message: 'Review deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while deleting the review' });
+    }
+});
 
 module.exports = router;
