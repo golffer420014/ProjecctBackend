@@ -127,14 +127,19 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
 
         if (file) {
             //ลบรูปเก่าถ้ามีรูปใหม่
-            if (user.image) {
-                const oldImagePath = user.image.replace(`${req.protocol}://${req.get('host')}/`, '');
-                await fsUpdate.unlink(oldImagePath); // ใช้ fs.promises เพื่อให้สามารถ await ได้
-           
-                // เซ็ต path ใหม่สำหรับรูปใหม่
-                const fileName = file.filename;
-                const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
-                imagepath = `${basePath}${fileName}`;
+            if (imagepath) {
+              const oldImagePath = user.image.replace(
+                `${req.protocol}://${req.get("host")}/`,
+                ""
+              );
+              await fsUpdate.unlink(oldImagePath); // ใช้ fs.promises เพื่อให้สามารถ await ได้
+
+              // เซ็ต path ใหม่สำหรับรูปใหม่
+              const fileName = file.filename;
+              const basePath = `${req.protocol}://${req.get(
+                "host"
+              )}/public/uploads/`;
+              imagepath = `${basePath}${fileName}`;
             }
 
             

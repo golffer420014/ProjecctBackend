@@ -1,0 +1,23 @@
+{
+  "navigation": {},
+  "route": {
+    "key": "New Post-mx_760MjUiGaKc-21OwPm",
+    "name": "New Post",
+    "params": {
+      "userProfile": {
+        "isAdmin": false,
+        "birth": "2023-11-13",
+        "gender": "Female",
+        "image": "http://10.0.2.2:3000/public/uploads/rn_image_picker_lib_temp_0ac4db4e-7e5f-49b8-b1e6-3ccee18ec3f9.jpg-1700019220624.jpeg",
+        "_id": "65543c144603b22770fb7fc8",
+        "fname": "f",
+        "lname": "l",
+        "email": "t",
+        "address": "ttttt",
+        "__v": 0,
+        "id": "65543c144603b22770fb7fc8"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NTU0M2MxNDQ2MDNiMjI3NzBmYjdmYzgiLCJpc0FkbWluIjpmYWxzZSwiaWF0IjoxNzAwMzA0NTc0LCJleHAiOjE3MDAzOTA5NzR9.vSXVmFAphMj2n3o7suOO3z1s8Yp5v-a-geTI3m7htiw"
+    }
+  }
+}
