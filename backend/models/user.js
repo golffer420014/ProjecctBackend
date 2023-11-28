@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   },
   address: {
     type: String,
+    required: true,
   },
   isAdmin: {
     type: Boolean,
@@ -26,7 +27,7 @@ const userSchema = new mongoose.Schema({
   },
   birth: {
     type: String,
-    default: "",
+    required: true,
   },
   gender: {
     type: String,

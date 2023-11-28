@@ -49,7 +49,7 @@ app.use(`${api}/community`, communityRouter)
 app.use(`${api}/event`, eventRouter)  
 // http://localhost:3000/api/v1/review 
 app.use(`${api}/review`, reviewRouter) 
-// http://localhost:3000/api/v1/review 
+// http://localhost:3000/api/v1/check-in 
 app.use(`${api}/check-in`, checkInRouter);
 
 
