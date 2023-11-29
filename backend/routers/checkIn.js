@@ -32,11 +32,22 @@ const storage = multer.diskStorage({
 
 const uploadOptions = multer({ storage: storage });
 
-// http://localhost:3000/api/v1/category
+// http://localhost:3000/api/v1/check-in
 // list
 router.get(`/`, async (req, res) => {
   try {
     const checkInList = await CheckIn.find(); //ค้นหาข้อมูล
+
+    res.status(200).send(checkInList);
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
+// read
+router.get(`/:id`, async (req, res) => {
+  try {
+    const checkInList = await CheckIn.findById(req.params.id) //ค้นหาข้อมูล
 
     res.status(200).send(checkInList);
   } catch (err) {
@@ -53,7 +64,7 @@ router.post("/", uploadOptions.single("image"), async (req, res) => {
 
     const fileName = file.filename;
     const localhost = `${req.protocol}://${req.get("host")}/public/uploads/`;
-    let category = new CheckIn({
+    let checkIn = new CheckIn({
       userId: req.body.userId,
       productId: req.body.productId,
       image: `${localhost}${fileName}`, // multer จะใส่ path ของไฟล์ที่อัปโหลดไว้ใน req.file.path
@@ -62,12 +73,12 @@ router.post("/", uploadOptions.single("image"), async (req, res) => {
       productName: req.body.productName,
       province: req.body.province,
     });
-    category = await category.save();
+    checkIn = await checkIn.save();
 
-    res.send(category);
+    res.send(checkIn);
   } catch (error) {
     res.status(500).send({
-      message: "The category cannot be created!",
+      message: "The check-in cannot be created!",
       error: error.message,
     });
   }
@@ -76,10 +87,10 @@ router.post("/", uploadOptions.single("image"), async (req, res) => {
 // delete
 router.delete("/:id", async (req, res) => {
   try {
-    const category = await CheckIn.findById(req.params.id);
-    if (category) {
+    const checkIn = await CheckIn.findById(req.params.id);
+    if (checkIn) {
       // สมมติว่า 'image' เป็น path ไปยังไฟล์รูปภาพที่เกี่ยวข้องกับหมวดหมู่
-      const filePath = category.icon.replace(
+      const filePath = checkIn.image.replace(
         `${req.protocol}://${req.get("host")}/`,
         ""
       );
