@@ -173,39 +173,68 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
 
 
 // delete
-router.delete('/:id', async (req, res) => {
-    try {
-        const product = await Product.findById(req.params.id);
-        if (product) {
-            // สมมติว่า 'image' เป็น path ไปยังไฟล์รูปภาพที่เกี่ยวข้องกับสินค้า
-            const filePath = product.image.replace(`${req.protocol}://${req.get('host')}/`, '');
-            console.log('img =',filePath)
-            // ลบไฟล์ออกจากระบบไฟล์
-            fsDelete.unlink(filePath, (err) => {
-                if (err) {
-                    // จัดการกับข้อผิดพลาดหากไฟล์ไม่มีอยู่หรือไม่สามารถลบได้
-                    console.error(err);
-                    return res.status(500).json({ success: false, message: 'ไม่สามารถลบไฟล์รูปภาพได้' });
-                
-                }
-
-                // ไฟล์ถูกลบแล้ว, ตอนนี้ลบข้อมูลสินค้าออกจากฐานข้อมูล
-                Product.findByIdAndRemove(req.params.id)
-                    .then(() => {
-                        return res.status(200).json({ success: true, message: 'ลบสินค้าและไฟล์รูปภาพเรียบร้อย' });
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        return res.status(500).json({ success: false, message: 'ไม่สามารถลบสินค้าได้' });
-                    });
+router.delete("/:id", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (product) {
+      // ตรวจสอบว่า product.image เริ่มต้นด้วย 'http' หรือไม่
+      console.log(product.image);
+      if (product.image.startsWith("https")) {
+        // ไม่ต้องทำการลบไฟล์, ไฟล์อยู่นอกเซิร์ฟเวอร์
+        Product.findByIdAndRemove(req.params.id)
+          .then(() => {
+            return res.status(200).json({
+              success: true,
+              message: "ลบสินค้าและไฟล์รูปภาพเรียบร้อย",
             });
-        } else {
-            return res.status(404).json({ success: false, message: 'ไม่พบสินค้า' });
-        }
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ success: false, error: err });
+          })
+          .catch((err) => {
+            console.error(err);
+            return res
+              .status(500)
+              .json({ success: false, message: "ไม่สามารถลบสินค้าได้" });
+          });
+      } else {
+        // ไฟล์อยู่ในเซิร์ฟเวอร์, ดำเนินการลบไฟล์
+        const filePath = product.image.replace(
+          `${req.protocol}://${req.get("host")}/`,
+          ""
+        );
+        console.log("img =", filePath);
+
+        fsDelete.unlink(filePath, (err) => {
+          if (err) {
+            console.error(err);
+            return res
+              .status(500)
+              .json({ success: false, message: "ไม่สามารถลบไฟล์รูปภาพได้" });
+          }
+
+          // ไฟล์ถูกลบแล้ว, ลบข้อมูลสินค้าออกจากฐานข้อมูล
+          Product.findByIdAndRemove(req.params.id)
+            .then(() => {
+              return res
+                .status(200)
+                .json({
+                  success: true,
+                  message: "ลบสินค้าและไฟล์รูปภาพเรียบร้อย",
+                });
+            })
+            .catch((err) => {
+              console.error(err);
+              return res
+                .status(500)
+                .json({ success: false, message: "ไม่สามารถลบสินค้าได้" });
+            });
+        });
+      }
+    } else {
+      return res.status(404).json({ success: false, message: "ไม่พบสินค้า" });
     }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, error: err });
+  }
 });
 
 // count
