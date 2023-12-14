@@ -28,7 +28,7 @@ const orderSchema = mongoose.Schema({
     phone: {
         type: String,
         required: true,
-    },
+    }, 
     status: {
         type: String,
         required: true,
