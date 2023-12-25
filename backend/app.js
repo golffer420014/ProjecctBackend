@@ -32,6 +32,7 @@ const communityRouter = require('./routers/community')
 const eventRouter = require('./routers/event')
 const reviewRouter = require('./routers/review')
 const checkInRouter = require("./routers/checkIn");
+const calendarNoteRouter = require("./routers/calendar-note");
 
 const api = process.env.API_URL; 
  
@@ -51,6 +52,8 @@ app.use(`${api}/event`, eventRouter)
 app.use(`${api}/review`, reviewRouter) 
 // http://localhost:3000/api/v1/check-in 
 app.use(`${api}/check-in`, checkInRouter);
+// http://localhost:3000/api/v1/calendar-note 
+app.use(`${api}/calendar-note`, calendarNoteRouter);
 
 
 // http://localhost:3000/api/v1/imageProducts 
