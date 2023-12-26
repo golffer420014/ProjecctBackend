@@ -60,5 +60,21 @@ router.post(`/`, async (req, res) => {
   }
 });
 
+// delete
+router.delete('/:id', async (req, res) => {
+    try {
+        const calendar = await CalendarNote.findByIdAndRemove(req.params.id);
+
+        if (!calendar) {
+          return res.status(404).json({ message: "Review not found" });
+        }
+
+        res.json({ message: 'Review deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while deleting the review' });
+    }
+});
+
 
 module.exports = router;
