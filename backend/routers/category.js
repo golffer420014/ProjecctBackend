@@ -65,9 +65,9 @@ router.post('/', uploadOptions.single('image'), async (req, res) => {
         const fileName = file.filename;
         const localhost = `${req.protocol}://${req.get('host')}/public/uploads/`;
         let category = new Category({
-            name: req.body.name,
-            icon: `${localhost}${fileName}`, // multer จะใส่ path ของไฟล์ที่อัปโหลดไว้ใน req.file.path
-            color: req.body.color
+          name: req.body.name,
+          icon: `${localhost}${fileName}`, // multer จะใส่ path ของไฟล์ที่อัปโหลดไว้ใน req.file.path
+          type: req.body.type,
         });
         category = await category.save();
 
