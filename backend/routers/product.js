@@ -179,8 +179,7 @@ router.delete("/:id", async (req, res) => {
     if (product) {
       // ตรวจสอบว่า product.image เริ่มต้นด้วย 'http' หรือไม่
       console.log(product.image);
-      if (product.image.startsWith("https")) {
-        // ไม่ต้องทำการลบไฟล์, ไฟล์อยู่นอกเซิร์ฟเวอร์
+      if (product.image.startsWith("http" || "https")) {
         Product.findByIdAndRemove(req.params.id)
           .then(() => {
             return res.status(200).json({
