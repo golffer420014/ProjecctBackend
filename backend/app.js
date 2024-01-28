@@ -8,6 +8,7 @@ require('dotenv/config');
 const authJwt = require('./helpers/jwt');
 const errorHandler = require('./helpers/error-handler');
 
+
 app.use(cors());
 app.options('*',cors())
 
@@ -33,6 +34,7 @@ const eventRouter = require('./routers/event')
 const reviewRouter = require('./routers/review')
 const checkInRouter = require("./routers/checkIn");
 const calendarNoteRouter = require("./routers/calendar-note");
+
 
 const api = process.env.API_URL; 
  
