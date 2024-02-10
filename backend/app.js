@@ -38,7 +38,7 @@ const calendarNoteRouter = require("./routers/calendar-note");
 
 const api = process.env.API_URL; 
  
-// http://localhost:3000/api/v1/product
+//  
 app.use(`${api}/products`, productRouter)
 // http://localhost:3000/api/v1/category
 app.use(`${api}/category`, categoryRouter)
