@@ -121,7 +121,6 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
         if (!user) {
             return res.status(404).json("User not found");
         }
-
         let imagepath = user.image; // เก็บ path เก่าไว้สำหรับการเปรียบเทียบ
         const file = req.file;
 
@@ -144,7 +143,6 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
 
             
         }
-
         const updatedUser = await User.findByIdAndUpdate(
            {_id: req.params.id},
             {
@@ -157,8 +155,6 @@ router.put('/:id', uploadOptions.single('image'), async (req, res) => {
             },
             { new: true }
         );
-
-
         res.send(updatedUser);
     } catch (error) {
         console.error(error);
